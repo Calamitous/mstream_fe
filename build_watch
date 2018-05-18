@@ -1,0 +1,6 @@
+find . -name *.elm | xargs echo
+while find . -name *.elm | xargs inotifywait -e modify,move_self; do
+  clear
+  echo Kicking off build on `date`
+  elm-make main.elm --output main.js && node minify.js > build/main_min.js
+done
