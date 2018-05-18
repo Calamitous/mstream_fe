@@ -22,18 +22,14 @@ main =
   }
 
 subscriptions : Model -> Sub Msg
-subscriptions model =
-    Sub.none
+subscriptions model = Sub.none
 
 init : (Model, Cmd Msg)
-init =
-    ( starter_model
-      , Cmd.none
-        )
+init = (starter_model, Cmd.none)
 
 -- MODEL
 type alias Model =
-  { user : String
+  { username : String
     , password : String
     , server_url : String
     , response : String
@@ -46,12 +42,31 @@ type alias File =
 
 
 -- UPDATE
-type Msg = Login | LoggedIn(Result Http.Error String)
+type Msg =
+  Login
+  | LoggedIn(Result Http.Error String)
+  | Username String
+  | Password String
+  | ServerUrl String
+
 update msg model =
   case msg of
-    Login              -> (model, (doLogin model))
-    LoggedIn (Ok resp) -> (Model model.user model.password model.server_url resp, Cmd.none)
-    LoggedIn (Err _)   -> (model, Cmd.none)
+    Login                     -> ({model | response = "Connecting..."}, (doLogin model))
+    LoggedIn (Ok response)    -> ({model | response = response}, Cmd.none)
+    LoggedIn (Err err)        -> ({model | response = (errorMaker err)}, Cmd.none)
+    Username (username)       -> ({model | username = username}, Cmd.none)
+    Password (password)       -> ({model | password = password}, Cmd.none)
+    ServerUrl (server_url)    -> ({model | server_url = server_url}, Cmd.none)
+
+errorMaker : Http.Error -> String
+errorMaker err =
+  case err of
+    Http.NetworkError              -> "Could not connect"
+    Http.BadUrl response           -> "Bad URL: " ++ response
+    Http.Timeout                   -> "Connection timed out"
+    Http.BadStatus response        -> "Bad Status"
+    Http.BadPayload error response -> "Bad Payload"
+
 
 loginUrl : Model -> String
 loginUrl model =
@@ -60,8 +75,10 @@ loginUrl model =
 doLogin : Model -> Cmd Msg
 doLogin model =
   Http.send LoggedIn (Http.post (loginUrl model) Http.emptyBody (Json.Decode.string))
+  -- Http.send LoggedIn (Http.get "https://jsonplaceholder.typicode.com/posts" (Json.Decode.string))
 
--- { username: model.user, password: model.password }
+
+-- { username: model.username, password: model.password }
 
 showFile content =
   div [ class "row" ] [
@@ -73,9 +90,21 @@ showFile content =
 -- VIEW
 view model =
   div [ class "c" ] [
-    button [ onClick Login ] [ text "Do it"]
-    , h1 [] [ text "Well howdy there!" ]
+    h1 [] [ text "Access connect" ]
     , div [ class "c" ] [ text model.response ]
-    -- (List.map showFile files.contents)
+    , div [ class "c" ] [
+      div [ class "row" ] [ div [ class "8 col" ] [
+          input [ type_ "text", name "server_url", placeholder "Server Url", onInput ServerUrl ] []
+        ] ]
+      , div [ class "row" ] [ div [ class "8 col" ] [
+          input [ type_ "text", name "username", placeholder "User Name", onInput Username ] []
+        ] ]
+      , div [ class "row" ] [ div [ class "8 col" ] [
+          input [ type_ "password", name "password", placeholder "Password", onInput Password ] [ text "http://music.pencricket.com:8888" ]
+        ] ]
+      , div [ class "row" ] [ div [ class "8 col" ] [
+          button [ onClick Login ] [ text "HIT ME"]
+        ] ]
+    ]
   ]
 
